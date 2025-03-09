@@ -30,6 +30,34 @@ func (_m *DB) Close() error {
 	return r0
 }
 
+// CreatePost provides a mock function with given fields: post
+func (_m *DB) CreatePost(post models.Post) (models.Post, error) {
+	ret := _m.Called(post)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreatePost")
+	}
+
+	var r0 models.Post
+	var r1 error
+	if rf, ok := ret.Get(0).(func(models.Post) (models.Post, error)); ok {
+		return rf(post)
+	}
+	if rf, ok := ret.Get(0).(func(models.Post) models.Post); ok {
+		r0 = rf(post)
+	} else {
+		r0 = ret.Get(0).(models.Post)
+	}
+
+	if rf, ok := ret.Get(1).(func(models.Post) error); ok {
+		r1 = rf(post)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetPostByID provides a mock function with given fields: id
 func (_m *DB) GetPostByID(id string) (models.Post, error) {
 	ret := _m.Called(id)

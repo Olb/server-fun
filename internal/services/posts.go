@@ -12,6 +12,7 @@ var ErrPostNotFound = errors.New("the requested post was not found")
 type PostService interface {
 	GetPosts() ([]models.Post, error)
 	GetPostByID(id string) (models.Post, error)
+	CreatePost(post models.Post) (models.Post, error)
 }
 
 type postService struct {
@@ -42,4 +43,8 @@ func (ps *postService) GetPostByID(id string) (models.Post, error) {
 	}
 
 	return post, nil
+}
+
+func (ps *postService) CreatePost(post models.Post) (models.Post, error) {
+	return ps.db.CreatePost(post)
 }

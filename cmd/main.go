@@ -3,12 +3,12 @@ package main
 import (
 	"log"
 
+	"olbcloud.com/webapi/internal/apiserver"
 	"olbcloud.com/webapi/internal/config"
 	"olbcloud.com/webapi/internal/database"
 	"olbcloud.com/webapi/internal/database/mongodb"
 	"olbcloud.com/webapi/internal/database/postgresql"
 	"olbcloud.com/webapi/internal/handlers"
-	"olbcloud.com/webapi/internal/server"
 	"olbcloud.com/webapi/internal/services"
 )
 
@@ -35,6 +35,6 @@ func main() {
 	postService := services.NewPostService(db)
 	hd := handlers.NewHandlers(postService)
 
-	mux := server.NewServer(hd)
-	server.StartServer(mux)
+	mux := apiserver.NewServer(hd)
+	apiserver.StartServer(mux)
 }

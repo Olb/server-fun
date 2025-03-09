@@ -1,4 +1,4 @@
-package server
+package apiserver
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ func NewServer(hd handlers.Handlers) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /posts", hd.GetPostsHandler)
+	mux.HandleFunc("POST /posts", hd.CreatePostHandler)
 	mux.HandleFunc("GET /posts/{id}", hd.GetPostByIDHandler)
 
 	return mux

@@ -83,6 +83,17 @@ func (m *MongoDB) GetPostByID(id string) (models.Post, error) {
 	return post, nil
 }
 
+func (m *MongoDB) CreatePost(post models.Post) (models.Post, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := m.posts.InsertOne(ctx, post)
+	if err != nil {
+		return models.Post{}, err
+	}
+	return post, nil
+}
+
 // Close closes the MongoDB connection
 func (m *MongoDB) Close() error {
 	return m.client.Disconnect(context.Background())

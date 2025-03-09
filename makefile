@@ -3,7 +3,7 @@ ifneq (,$(wildcard .env))
 	export
 endif
 
-run-postgres:
+run-sql:
 	docker-compose --env-file .env up --build postgres api
 
 run-mongo:

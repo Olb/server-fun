@@ -32,7 +32,7 @@ func NewPostgreSQL(dsn string) (database.DB, error) {
 }
 
 func (p *PostgreSQL) GetPosts() ([]models.Post, error) {
-	rows, err := p.conn.Query("SELECT id, title, body FROM posts")
+	rows, err := p.conn.Query("SELECT id, title, body, created_at, updated_at FROM posts")
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (p *PostgreSQL) GetPosts() ([]models.Post, error) {
 	var posts []models.Post
 	for rows.Next() {
 		var p models.Post
-		if err := rows.Scan(&p.ID, &p.Title, &p.Body); err != nil {
+		if err := rows.Scan(&p.ID, &p.Title, &p.Body, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
 		posts = append(posts, p)
@@ -56,12 +56,26 @@ func (p *PostgreSQL) GetPosts() ([]models.Post, error) {
 
 func (p *PostgreSQL) GetPostByID(id string) (models.Post, error) {
 	var post models.Post
-	err := p.conn.QueryRow("SELECT id, title, body FROM posts WHERE id = $1", id).
-		Scan(&post.ID, &post.Title, &post.Body)
+	err := p.conn.QueryRow("SELECT id, title, body, created_at, updated_at FROM posts WHERE id = $1", id).
+		Scan(&post.ID, &post.Title, &post.Body, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return models.Post{}, database.ErrNotFound
 		}
+		return models.Post{}, err
+	}
+	return post, nil
+}
+
+func (p *PostgreSQL) CreatePost(post models.Post) (models.Post, error) {
+	err := p.conn.QueryRow(
+		`INSERT INTO posts (title, body) 
+		 VALUES ($1, $2) 
+		 RETURNING id, title, body, created_at, updated_at`,
+		post.Title, post.Body,
+	).Scan(&post.ID, &post.Title, &post.Body, &post.CreatedAt, &post.UpdatedAt)
+
+	if err != nil {
 		return models.Post{}, err
 	}
 	return post, nil

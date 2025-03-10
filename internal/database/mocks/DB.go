@@ -116,6 +116,34 @@ func (_m *DB) GetPosts() ([]models.Post, error) {
 	return r0, r1
 }
 
+// UpdatePost provides a mock function with given fields: post
+func (_m *DB) UpdatePost(post models.Post) (models.Post, error) {
+	ret := _m.Called(post)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdatePost")
+	}
+
+	var r0 models.Post
+	var r1 error
+	if rf, ok := ret.Get(0).(func(models.Post) (models.Post, error)); ok {
+		return rf(post)
+	}
+	if rf, ok := ret.Get(0).(func(models.Post) models.Post); ok {
+		r0 = rf(post)
+	} else {
+		r0 = ret.Get(0).(models.Post)
+	}
+
+	if rf, ok := ret.Get(1).(func(models.Post) error); ok {
+		r1 = rf(post)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewDB creates a new instance of DB. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewDB(t interface {

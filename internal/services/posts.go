@@ -13,6 +13,7 @@ type PostService interface {
 	GetPosts() ([]models.Post, error)
 	GetPostByID(id string) (models.Post, error)
 	CreatePost(post models.Post) (models.Post, error)
+	UpdatePost(post models.Post) (models.Post, error)
 }
 
 type postService struct {
@@ -47,4 +48,16 @@ func (ps *postService) GetPostByID(id string) (models.Post, error) {
 
 func (ps *postService) CreatePost(post models.Post) (models.Post, error) {
 	return ps.db.CreatePost(post)
+}
+
+func (ps *postService) UpdatePost(post models.Post) (models.Post, error) {
+	post, err := ps.db.UpdatePost(post)
+	if err != nil {
+		if err == database.ErrNotFound {
+			return models.Post{}, ErrPostNotFound
+		}
+		return models.Post{}, err
+	}
+
+	return post, nil
 }

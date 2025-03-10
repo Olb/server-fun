@@ -24,48 +24,6 @@ var mockPosts = []models.Post{
 	{ID: 2, Title: "Post 2", Body: "Content 2", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 }
 
-func setupTest(mockDB database.DB) (*httptest.ResponseRecorder, http.Handler) {
-	postService := services.NewPostService(mockDB)
-	h := handlers.NewHandlers(postService)
-	mux := apiserver.NewServer(h)
-	return httptest.NewRecorder(), mux
-}
-
-func validateResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedBody string) {
-	t.Helper()
-	assert.Equal(t, expectedStatus, w.Code)
-	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-
-	var actual map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &actual)
-	assert.NoError(t, err)
-
-	var expected map[string]interface{}
-	err = json.Unmarshal([]byte(expectedBody), &expected)
-	assert.NoError(t, err)
-
-	// get rid of those annoying timestamps
-	removeTimestamps(actual)
-	removeTimestamps(expected)
-
-	assert.Equal(t, expected, actual)
-}
-
-func removeTimestamps(data map[string]interface{}) {
-	if post, ok := data["post"].(map[string]interface{}); ok {
-		delete(post, "created_at")
-		delete(post, "updated_at")
-	}
-	if posts, ok := data["posts"].([]interface{}); ok {
-		for _, p := range posts {
-			if postMap, ok := p.(map[string]interface{}); ok {
-				delete(postMap, "created_at")
-				delete(postMap, "updated_at")
-			}
-		}
-	}
-}
-
 func TestHandlers(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -198,6 +156,78 @@ func TestHandlers(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   `{"error":"failed to create post"}`,
 		},
+		{
+			name:   "Failes to update post with invalid payload",
+			method: http.MethodPut,
+			url:    "/posts/1",
+			body:   ``,
+			mockSetup: func(m *mocks.DB) {
+				m.AssertNotCalled(t, "UpdatePost")
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid request payload"}`,
+		},
+		{
+			name:   "Updates a post returns invalid payload",
+			method: http.MethodPut,
+			url:    "/posts/1",
+			body:   `{"some":1}`,
+			mockSetup: func(m *mocks.DB) {
+				m.AssertNotCalled(t, "UpdatePost")
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"missing required fields"}`,
+		},
+		{
+			name:   "Updates handles invalid path param that isn't an int",
+			method: http.MethodPut,
+			url:    "/posts/b",
+			body:   `{"id": 1, "title": "New Post", "body": "New Content"}`,
+			mockSetup: func(m *mocks.DB) {
+				m.AssertNotCalled(t, "UpdatePost")
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid post ID"}`,
+		},
+		{
+			name:   "Updates handles post not found",
+			method: http.MethodPut,
+			url:    "/posts/1",
+			body:   `{"id": 1, "title": "New Post", "body": "New Content"}`,
+			mockSetup: func(m *mocks.DB) {
+				m.On("UpdatePost", mock.AnythingOfType("models.Post")).Return(models.Post{}, database.ErrNotFound)
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   `{"error":"post not found"}`,
+		},
+		{
+			name:   "Updates handles post not found",
+			method: http.MethodPut,
+			url:    "/posts/1",
+			body:   `{"id": 1, "title": "New Post", "body": "New Content"}`,
+			mockSetup: func(m *mocks.DB) {
+				m.On("UpdatePost", mock.AnythingOfType("models.Post")).Return(models.Post{}, errors.New("failed to update post"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   `{"error":"failed to update post"}`,
+		},
+		{
+			name:   "Updates a post successfully",
+			method: http.MethodPut,
+			url:    "/posts/1",
+			body:   `{"id":1, "title": "Updated Post", "body": "Updated Content"}`,
+			mockSetup: func(m *mocks.DB) {
+				m.On("UpdatePost", mock.AnythingOfType("models.Post")).Return(models.Post{
+					ID:        1,
+					Title:     "Updated Post",
+					Body:      "Updated Content",
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
+				}, nil)
+			},
+			expectedStatus: http.StatusAccepted,
+			expectedBody:   `{"message":"post updated","status":"success","post":{"id":1,"title":"Updated Post","body":"Updated Content"}}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -214,5 +244,47 @@ func TestHandlers(t *testing.T) {
 			validateResponse(t, w, tt.expectedStatus, tt.expectedBody)
 			mockDB.AssertExpectations(t)
 		})
+	}
+}
+
+func setupTest(mockDB database.DB) (*httptest.ResponseRecorder, http.Handler) {
+	postService := services.NewPostService(mockDB)
+	h := handlers.NewHandlers(postService)
+	mux := apiserver.NewServer(h)
+	return httptest.NewRecorder(), mux
+}
+
+func validateResponse(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedBody string) {
+	t.Helper()
+	assert.Equal(t, expectedStatus, w.Code)
+	assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+	var actual map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &actual)
+	assert.NoError(t, err)
+
+	var expected map[string]interface{}
+	err = json.Unmarshal([]byte(expectedBody), &expected)
+	assert.NoError(t, err)
+
+	// get rid of those annoying timestamps
+	removeTimestamps(actual)
+	removeTimestamps(expected)
+
+	assert.Equal(t, expected, actual)
+}
+
+func removeTimestamps(data map[string]interface{}) {
+	if post, ok := data["post"].(map[string]interface{}); ok {
+		delete(post, "created_at")
+		delete(post, "updated_at")
+	}
+	if posts, ok := data["posts"].([]interface{}); ok {
+		for _, p := range posts {
+			if postMap, ok := p.(map[string]interface{}); ok {
+				delete(postMap, "created_at")
+				delete(postMap, "updated_at")
+			}
+		}
 	}
 }

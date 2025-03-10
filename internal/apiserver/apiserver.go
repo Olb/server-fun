@@ -15,6 +15,7 @@ func NewServer(hd handlers.Handlers) *http.ServeMux {
 
 	mux.HandleFunc("GET /posts", hd.GetPostsHandler)
 	mux.HandleFunc("POST /posts", hd.CreatePostHandler)
+	mux.HandleFunc("PUT /posts/{id}", hd.UpdatePostHandler)
 	mux.HandleFunc("GET /posts/{id}", hd.GetPostByIDHandler)
 
 	return mux
@@ -27,8 +28,8 @@ func StartServer(mux *http.ServeMux) {
 	}
 
 	addr := fmt.Sprintf(":%s", port)
-
 	log.Printf("Starting server on %s\n", addr)
+
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
@@ -36,7 +37,7 @@ func StartServer(mux *http.ServeMux) {
 		AllowCredentials: true,
 	})
 
-	handler := c.Handler(mux)
+	handler := LogMiddleware(c.Handler(mux))
 
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)

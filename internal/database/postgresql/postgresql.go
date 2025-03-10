@@ -81,6 +81,23 @@ func (p *PostgreSQL) CreatePost(post models.Post) (models.Post, error) {
 	return post, nil
 }
 
+func (p *PostgreSQL) UpdatePost(post models.Post) (models.Post, error) {
+	err := p.conn.QueryRow(
+		`UPDATE posts SET title = $1, body = $2, updated_at = NOW() 
+		 WHERE id = $3 
+		 RETURNING id, title, body, created_at, updated_at`,
+		post.Title, post.Body, post.ID,
+	).Scan(&post.ID, &post.Title, &post.Body, &post.CreatedAt, &post.UpdatedAt)
+	
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.Post{}, database.ErrNotFound
+		}
+		return models.Post{}, err
+	}
+	return post, nil
+}
+
 func (p *PostgreSQL) Close() error {
 	return p.conn.Close()
 }

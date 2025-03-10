@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"olbcloud.com/webapi/internal/models"
@@ -64,6 +65,39 @@ func (h *Handlers) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeResponse(w, http.StatusCreated, map[string]interface{}{"message": "post created", "status": "success", "post": post})
+}
+
+func (h *Handlers) UpdatePostHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	var post models.Post
+	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		writeResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid request payload"})
+		return
+	}
+
+	if err := validate.Struct(post); err != nil {
+		writeResponse(w, http.StatusBadRequest, map[string]string{"error": "missing required fields"})
+		return
+	}
+
+	var err error
+	post.ID, err = strconv.Atoi(id)
+	if err != nil {
+		writeResponse(w, http.StatusBadRequest, map[string]string{"error": "invalid post ID"})
+		return
+	}
+
+	if _, err := h.PostService.UpdatePost(post); err != nil {
+		if errors.Is(err, services.ErrPostNotFound) {
+			writeResponse(w, http.StatusNotFound, map[string]string{"error": "post not found"})
+			return
+		}
+		writeResponse(w, http.StatusInternalServerError, map[string]string{"error": "failed to update post"})
+		return
+	}
+
+	writeResponse(w, http.StatusAccepted, map[string]interface{}{"message": "post updated", "status": "success", "post": post})
 }
 
 func writeResponse(w http.ResponseWriter, code int, data interface{}) {

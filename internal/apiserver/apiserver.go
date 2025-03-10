@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/rs/cors"
 	"olbcloud.com/webapi/internal/handlers"
 )
 
@@ -26,8 +27,18 @@ func StartServer(mux *http.ServeMux) {
 	}
 
 	addr := fmt.Sprintf(":%s", port)
+
 	log.Printf("Starting server on %s\n", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(mux)
+
+	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
 }

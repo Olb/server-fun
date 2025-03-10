@@ -38,8 +38,22 @@ services:
       - "${SERVER_PORT}:8080"
     networks:
       - blog-network
-    command: >
-      sh -c "migrate -path=/migrations -database=${POSTGRESQL_URL} up && ./blog-api"
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: blog-frontend
+    restart: always
+    depends_on:
+      - api
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    ports:
+      - "3000:80"
+    networks:
+      - blog-network
+
 
 networks:
   blog-network:
